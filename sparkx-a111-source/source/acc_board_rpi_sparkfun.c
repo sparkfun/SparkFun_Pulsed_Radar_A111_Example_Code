@@ -10,13 +10,11 @@
 #include "acc_definitions.h" // - added for acc_os_mutex_t
 #include "acc_device_gpio.h"
 #include "acc_device_os.h"
+#include "acc_device_spi.h"
 #include "acc_driver_gpio_linux_sysfs.h"
 #include "acc_driver_os_linux.h"
 #include "acc_driver_spi_linux_spidev.h"
 #include "acc_log.h"
-
-// #include "acc_os_linux.h" - changed to acc_driver_os_linux
-// #include "acc_os.h" - changed to acc_device_os
 
 /**
  * @brief The module name
@@ -86,11 +84,45 @@ typedef enum {
  */
 static acc_board_sensor_state_t sensor_state[SENSOR_COUNT] = {SENSOR_STATE_UNKNOWN};
 
+static acc_device_handle_t spi_handle;
+static acc_os_semaphor_t isr_semaphores[SENSOR_COUNT];
 
-static const uint_fast8_t sensor_interrupt_pins[SENSOR_COUNT] = {
-	GPIO0_PIN
-};
+static void isr_sensor1(void)
 
+{
+	acc_os_semaphore_signal_from_interrupt(isr_semaphores[0]);
+}
+
+static bool setup_isr(void)
+{
+	for (uint_fast8_t i = 0; i < SENSOR_COUNT; i++)
+	{
+		isr_semaphores[i] = acc_os_semaphore_create();
+
+		if (isr_semaphores[i] == NULL)
+		{
+			return false;
+		}
+	}
+
+	if ( !acc_device_gpio_register_isr(GPIO0_PIN, ACC_DEVICE_GPIO_EDGE_RISING, &isr_sensor1)){
+		return false;
+	}
+
+	return true;
+}
+
+
+static void deinit(void)
+{
+	for (uint_fast8_t i = 0; i < SENSOR_COUNT; i++)
+	{
+		if (isr_semaphores[i] != NULL)
+		{
+			acc_os_semaphore_destroy(isr_semaphores[i]);
+		}
+	}
+}
 
 /**
  * @brief Get the combined status of all sensors
@@ -108,82 +140,67 @@ static bool acc_board_all_sensors_inactive(void)
 }
 
 
-acc_status_t acc_board_gpio_init(void)
+bool acc_board_gpio_init(void)
 {
-	acc_status_t		status;
 	static bool		init_done = false;
-	static acc_os_mutex_t	init_mutex = NULL;
 
 	if (init_done) {
-		return ACC_STATUS_SUCCESS;
+		return true;
 	}
 
 	acc_os_init();
-	init_mutex = acc_os_mutex_create();
 
-	acc_os_mutex_lock(init_mutex);
-	if (init_done) {
-		acc_os_mutex_unlock(init_mutex);
-		return ACC_STATUS_SUCCESS;
-	}
+	acc_device_gpio_set_initial_pull(GPIO0_PIN, 0);
+	acc_device_gpio_set_initial_pull(RSTn_PIN, 1);
+	acc_device_gpio_set_initial_pull(ENABLE_PIN, 0);
 
-	if (
-		(status = acc_device_gpio_set_initial_pull(GPIO0_PIN, 0)) ||
-		(status = acc_device_gpio_set_initial_pull(RSTn_PIN, 1)) ||
-		(status = acc_device_gpio_set_initial_pull(ENABLE_PIN, 0))// ||
-		//(status = acc_device_gpio_set_initial_pull(CE_PIN, 1))
-	) {
-		ACC_LOG_WARNING("%s: failed to set initial pull with status: %s", __func__, acc_log_status_name(status));
-	}
-
-	if (
-		(status = acc_device_gpio_input(GPIO0_PIN)) ||
-		(status = acc_device_gpio_write(RSTn_PIN, 0)) ||
-		(status = acc_device_gpio_write(ENABLE_PIN, 0))// ||
-		//(status = acc_device_gpio_write(CE_PIN, 1))
-	) {
-		ACC_LOG_ERROR("%s failed with %s", __func__, acc_log_status_name(status));
-		acc_os_mutex_unlock(init_mutex);
-		return status;
+	if(
+		!acc_device_gpio_input(GPIO0_PIN))  ||
+		!acc_device_gpio_write(RSTn_PIN, 0) ||
+		!acc_device_gpio_write(ENABLE_PIN, 0))
+	{
+		ACC_LOG_WARNING("%s: failed to set initial pull with status: %s", __func__, false);
+	  return false;
 	}
 
 	init_done = true;
-	acc_os_mutex_unlock(init_mutex);
 
-	return ACC_STATUS_SUCCESS;
+	return true;
 }
 
 
-acc_status_t acc_board_init(void)
+bool acc_board_init(void)
 {
 	static bool		init_done = false;
-	static acc_os_mutex_t	init_mutex = NULL;
 
 	if (init_done) {
-		return ACC_STATUS_SUCCESS;
+		return true;
 	}
 
 	acc_driver_os_linux_register();
 	acc_os_init();
-	init_mutex = acc_os_mutex_create();
 
-	acc_os_mutex_lock(init_mutex);
-	if (init_done) {
-		acc_os_mutex_unlock(init_mutex);
-		return ACC_STATUS_SUCCESS;
-	}
-
-	acc_driver_gpio_linux_sysfs_register(28);
 	acc_driver_spi_linux_spidev_register();
+  acc_device_gpio_init();
+
+  acc_device_spi_configuration_t configuration;
+
+  configuration.bus           = ACC_BOARD_BUS;
+  configuration.configuration = NULL;
+  configuration.device        = ACC_BOARD_CS;
+  configuration.master        = true;
+  configuration.speed         = ACC_BOARD_SPI_SPEED;
+
+  spi_handle = acc_device_spi_create(&configuration);
 
 	for (uint_fast8_t sensor_index = 0; sensor_index < SENSOR_COUNT; sensor_index++) {
 		sensor_state[sensor_index] = SENSOR_STATE_UNKNOWN;
 	}
 
-	init_done = true;
+	init_done = trueacc_device_gpio_input;
 	acc_os_mutex_unlock(init_mutex);
 
-	return ACC_STATUS_SUCCESS;
+	return true;
 }
 
 
@@ -194,45 +211,43 @@ acc_status_t acc_board_init(void)
  *
  * @return Status
  */
-static acc_status_t acc_board_reset_sensor(void)
+static bool acc_board_reset_sensor(void)
 {
-	acc_status_t status;
 
 	status = acc_device_gpio_write(RSTn_PIN, 0);
-	if (status != ACC_STATUS_SUCCESS) {
+	if (status != true) {
 		ACC_LOG_ERROR("Unable to activate RSTn");
 		return status;
 	}
 
 	status = acc_device_gpio_write(ENABLE_PIN, 0);
-	if (status != ACC_STATUS_SUCCESS) {
+	if (status != true) {
 		ACC_LOG_ERROR("Unable to deactivate ENABLE");
 		return status;
 	}
 
-	return ACC_STATUS_SUCCESS;
+	return true;
 }
 
 
-acc_status_t acc_board_start_sensor(acc_sensor_t sensor)
+bool acc_board_start_sensor(acc_sensor_t sensor)
 {
-	acc_status_t status;
 
 	if (sensor_state[sensor - 1] == SENSOR_STATE_BUSY) {
 		ACC_LOG_ERROR("Sensor %u already active.", sensor);
-		return ACC_STATUS_FAILURE;
+		return false;
 	}
 
 	if (acc_board_all_sensors_inactive()) {
 		status = acc_device_gpio_write(RSTn_PIN, 0);
-		if (status != ACC_STATUS_SUCCESS) {
+		if (status != true) {
 			ACC_LOG_ERROR("Unable to activate RSTn");
 			acc_board_reset_sensor();
 			return status;
 		}
 
 		status = acc_device_gpio_write(ENABLE_PIN, 1);
-		if (status != ACC_STATUS_SUCCESS) {
+		if (status != true) {
 			ACC_LOG_ERROR("Unable to activate ENABLE");
 			acc_board_reset_sensor();
 			return status;
@@ -242,7 +257,7 @@ acc_status_t acc_board_start_sensor(acc_sensor_t sensor)
 		acc_os_sleep_us(5000);
 
 		status = acc_device_gpio_write(RSTn_PIN, 1);
-		if (status != ACC_STATUS_SUCCESS) {
+		if (status != true) {
 			ACC_LOG_ERROR("Unable to deactivate RSTn");
 			acc_board_reset_sensor();
 			return status;
@@ -255,20 +270,20 @@ acc_status_t acc_board_start_sensor(acc_sensor_t sensor)
 
 	if (sensor_state[sensor - 1] != SENSOR_STATE_READY) {
 		ACC_LOG_ERROR("Sensor has not been reset");
-		return ACC_STATUS_FAILURE;
+		return false;
 	}
 
 	sensor_state[sensor - 1] = SENSOR_STATE_BUSY;
 
-	return ACC_STATUS_SUCCESS;
+	return true;
 }
 
 
-acc_status_t acc_board_stop_sensor(acc_sensor_t sensor)
+bool acc_board_stop_sensor(acc_sensor_t sensor)
 {
 	if (sensor_state[sensor - 1] != SENSOR_STATE_BUSY) {
 		ACC_LOG_ERROR("Sensor %u already inactive.", sensor);
-		return ACC_STATUS_FAILURE;
+		return false;
 	}
 
 	sensor_state[sensor - 1] = SENSOR_STATE_UNKNOWN;
@@ -277,7 +292,7 @@ acc_status_t acc_board_stop_sensor(acc_sensor_t sensor)
 		return acc_board_reset_sensor();
 	}
 
-	return ACC_STATUS_SUCCESS;
+	return true;
 }
 
 
@@ -293,11 +308,10 @@ void acc_board_get_spi_bus_cs(acc_sensor_t sensor, uint_fast8_t *bus, uint_fast8
 }
 
 
-acc_status_t acc_board_chip_select(acc_sensor_t sensor, uint_fast8_t cs_assert)
+bool acc_board_chip_select(acc_sensor_t sensor, uint_fast8_t cs_assert)
 {
 	ACC_UNUSED(sensor);
 	ACC_UNUSED(cs_assert);
-	/*acc_status_t status;
 
 	if (cs_assert) {
 		uint_fast8_t cea_val = (sensor == 1 || sensor == 2) ? 0 : 1;
@@ -317,7 +331,7 @@ acc_status_t acc_board_chip_select(acc_sensor_t sensor, uint_fast8_t cs_assert)
 		}
 	}*/
 
-	return ACC_STATUS_SUCCESS;
+	return true;
 }
 
 
@@ -337,11 +351,10 @@ bool acc_board_is_sensor_interrupt_connected(acc_sensor_t sensor)
 
 bool acc_board_is_sensor_interrupt_active(acc_sensor_t sensor)
 {
-	acc_status_t status;
 	uint_fast8_t value;
 
 	status = acc_device_gpio_read(sensor_interrupt_pins[sensor - 1], &value);
-	if (status != ACC_STATUS_SUCCESS) {
+	if (status != true) {
 		ACC_LOG_ERROR("Could not obtain GPIO interrupt value for sensor %" PRIsensor " with status: %s.", sensor, acc_log_status_name(status));
 		return false;
 	}
@@ -364,7 +377,7 @@ uint32_t acc_board_get_spi_speed(uint_fast8_t bus)
 }
 
 
-acc_status_t acc_board_set_ref_freq(float ref_freq)
+bool acc_board_set_ref_freq(float ref_freq)
 {
 	ACC_UNUSED(ref_freq);
 
