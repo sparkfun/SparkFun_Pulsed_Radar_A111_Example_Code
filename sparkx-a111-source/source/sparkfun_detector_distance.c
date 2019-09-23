@@ -50,8 +50,7 @@ static acc_detector_distance_peak_status_t distance_peak_detect_with_blocking_ca
     acc_detector_distance_peak_configuration_t distance_configuration);
 
 static char *format_distances( uint16_t reflection_count,
-                               const acc_detector_distance_peak_reflection_t *reflections,
-                               float sensor_offset );
+                               const acc_detector_distance_peak_reflection_t *reflections);
 
 static void configure_detector(acc_detector_distance_peak_configuration_t distance_configuration);
 void waitForEnter(void);
@@ -135,7 +134,6 @@ acc_detector_distance_peak_status_t distance_peak_detect_with_blocking_calls(acc
 	}
 
 	acc_detector_distance_peak_get_metadata(handle, &metadata);
-	printf("Free space absolute offset: %u mm\n", (unsigned int)(metadata.free_space_absolute_offset * 1000.0 + 0.5));
 	printf("Actual start: %u mm\n", (unsigned int)(metadata.actual_start_m * 1000.0 + 0.5));
 	printf("Actual length: %u mm\n", (unsigned int)(metadata.actual_length_m * 1000.0 + 0.5));
 	printf("Actual end: %u mm\n", (unsigned int)((metadata.actual_start_m + metadata.actual_length_m) * 1000.0 + 0.5));
@@ -166,7 +164,7 @@ acc_detector_distance_peak_status_t distance_peak_detect_with_blocking_calls(acc
 				(unsigned int)result_info.sequence_number,
 				(unsigned int)(start_m * 1000.0 + 0.5),
 				(unsigned int)(end_m * 1000.0 + 0.5),
-				format_distances(reflection_count, reflections, metadata.free_space_absolute_offset));
+				format_distances(reflection_count, reflections);
 			}
 			else {
 				printf("reflection data not properly retrieved\n");
@@ -206,7 +204,6 @@ acc_detector_distance_peak_status_t distance_peak_detect_with_blocking_calls_wit
 	}
 
 	acc_detector_distance_peak_get_metadata(handle, &metadata);
-	printf("Free space absolute offset: %u mm\n", (unsigned int)(metadata.free_space_absolute_offset * 1000.0 + 0.5));
 	printf("Actual start: %u mm\n", (unsigned int)(metadata.actual_start_m * 1000.0 + 0.5));
 	printf("Actual length: %u mm\n", (unsigned int)(metadata.actual_length_m * 1000.0 + 0.5));
 	printf("Actual end: %u mm\n", (unsigned int)((metadata.actual_start_m + metadata.actual_length_m) * 1000.0 + 0.5));
@@ -254,7 +251,7 @@ acc_detector_distance_peak_status_t distance_peak_detect_with_blocking_calls_wit
 					(unsigned int)result_info.sequence_number,
 					(unsigned int)(start_m * 1000.0 + 0.5),
 					(unsigned int)(end_m * 1000.0 + 0.5),
-					format_distances(reflection_count, reflections, metadata.free_space_absolute_offset));
+					format_distances(reflection_count, reflections);
 				}
 				else {
 					printf("reflection data not properly retrieved\n");
@@ -278,8 +275,7 @@ acc_detector_distance_peak_status_t distance_peak_detect_with_blocking_calls_wit
 }
 
 char *format_distances(uint16_t reflection_count,
-		       const acc_detector_distance_peak_reflection_t *reflections,
-		       float sensor_offset)
+		       const acc_detector_distance_peak_reflection_t *reflections)
 {
 	static char	buffer[1024];
 	size_t		total_count = 0;
@@ -296,7 +292,7 @@ char *format_distances(uint16_t reflection_count,
 		}
 
 		count = snprintf(&buffer[total_count], sizeof(buffer) - total_count, "%u mm (%u)",
-				(unsigned int)((reflections[reflection_index].distance - sensor_offset) * 1000.0 + 0.5),
+				(unsigned int)((reflections[reflection_index].distance) * 1000.0 + 0.5),
 				(unsigned int)(reflections[reflection_index].amplitude + 0.5));
 		if (count < 0) {
 			break;
