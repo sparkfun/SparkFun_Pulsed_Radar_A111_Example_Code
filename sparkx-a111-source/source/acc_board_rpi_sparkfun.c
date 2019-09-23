@@ -7,21 +7,23 @@
 #include <stdio.h>
 
 #include "acc_board.h"
+#include "acc_definitions.h" // - added for acc_os_mutex_t
 #include "acc_device_gpio.h"
+#include "acc_device_os.h"
 #include "acc_driver_gpio_linux_sysfs.h"
+#include "acc_driver_os_linux.h"
 #include "acc_driver_spi_linux_spidev.h"
 #include "acc_log.h"
-#include "acc_device_os.h"
-#include "acc_os_linux.h"
-// #include "acc_os.h" - changed to acc_device_os
 
+// #include "acc_os_linux.h" - changed to acc_driver_os_linux
+// #include "acc_os.h" - changed to acc_device_os
 
 /**
  * @brief The module name
  *
  * Must exist if acc_log.h is used.
  */
-#define MODULE		"acc_board_rpi_sparkfun"
+#define MODULE	"acc_board_rpi_sparkfun"
 
 /**
  * @brief The number of sensors available on the board

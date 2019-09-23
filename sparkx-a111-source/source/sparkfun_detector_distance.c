@@ -1,18 +1,21 @@
-// Copyright (c) Acconeer AB, 2018
+// Copyright (c) Acconeer AB, 2018-2019
 // All rights reserved
 
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
+#include <signal.h> // - not seeing signal.h still exists
 
 #include "acc_detector_distance_peak.h"
-#include "acc_os.h"
 #include "acc_rss.h"
 #include "acc_sweep_configuration.h"
-#include "acc_types.h"
 #include "acc_version.h"
+
+// vv extraneous or no?
+#include "acc_os.h"
+#include "acc_types_version.h"
+// #include "acc_types.h" - changed to "acc_types_version.h"
 
 
 /**
@@ -33,22 +36,27 @@
 
 #define FIXED_THRESHOLD_VALUE   (1500)
 #define SENSOR_ID               (1)
-#define RANGE_START_M           (0.2)
-#define RANGE_LENGTH_M          (0.5)
+#define RANGE_START_M           (0.2f)
+#define RANGE_LENGTH_M          (0.5f)
 
 #define NUM_DISTANCE_DETECT           100
 #define NUM_DISTANCE_THRESHOLD_DETECT 100
 
 // All functions ----
-static acc_detector_distance_peak_status_t distance_peak_detect_with_blocking_calls(acc_detector_distance_peak_configuration_t distance_configuration);
-static acc_detector_distance_peak_status_t distance_peak_detect_with_blocking_calls_with_estimated_threshold(acc_detector_distance_peak_configuration_t distance_configuration);
-static char *format_distances(uint16_t reflection_count,
-			      const acc_detector_distance_peak_reflection_t *reflections,
-			      float sensor_offset);
+static acc_detector_distance_peak_status_t distance_peak_detect_with_blocking_calls(
+    acc_detector_distance_peak_configuration_t distance_configuration);
+
+static acc_detector_distance_peak_status_t distance_peak_detect_with_blocking_calls_with_estimated_threshold(
+    acc_detector_distance_peak_configuration_t distance_configuration);
+
+static char *format_distances( uint16_t reflection_count,
+                               const acc_detector_distance_peak_reflection_t *reflections,
+                               float sensor_offset );
+
 static void configure_detector(acc_detector_distance_peak_configuration_t distance_configuration);
 void waitForEnter(void);
 // All functions ^^
-//
+
 static uint8_t not_interrupted = 1;
 
 void exit_handler(int sig_num)
