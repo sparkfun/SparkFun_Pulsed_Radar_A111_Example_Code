@@ -1,6 +1,6 @@
-BUILD_ALL += $(OUT_DIR)/sparkfun_detector_obstacle
+BUILD_ALL += $(OUT_DIR)/sparkfun_detector_power_bins
 
-$(OUT_DIR)/sparkfun_detector_obstacle : \
+$(OUT_DIR)/sparkfun_detector_power_bins : \
 					$(OUT_OBJ_DIR)/example_service_power_bins.o \
 					libacconeer.a \
 					libacconeer_sensor.a \
