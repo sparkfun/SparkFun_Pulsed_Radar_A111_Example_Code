@@ -299,24 +299,6 @@ void acc_board_stop_sensor(acc_sensor_id_t sensor)
 	}
 }
 
-bool acc_board_chip_select(acc_sensor_id_t sensor, uint_fast8_t cs_assert)
-{
-
-	if (cs_assert) {
-
-		uint_fast8_t cea_val = (sensor == 1 || sensor == 2) ? 0 : 1;
-		uint_fast8_t ceb_val = (sensor == 1 || sensor == 3) ? 0 : 1;
-
-		if ( )// remove CEA and CEB entirely) 
-		{
-			return false;
-		}
-  }
-
-	return true;
-}
-
-
 uint32_t acc_board_get_sensor_count(void)
 {
 	return SENSOR_COUNT;
