@@ -70,7 +70,7 @@
 /**
  * @brief Number of GPIO pins
  */
-#define GPIO_PIN_COUNT 1 
+#define GPIO_PIN_COUNT 28 
 
 /**
  * @brief Sensor states
