@@ -182,7 +182,7 @@ bool acc_board_init(void)
 	if (init_done) {
 		return true;
 	}
- 1
+
 	acc_driver_os_linux_register();
 	acc_os_init();
 
@@ -313,7 +313,7 @@ bool acc_board_chip_select(acc_sensor_id_t sensor, uint_fast8_t cs_assert)
 	{
 		uint_fast8_t cea_val = (sensor == 1 || sensor == 2) ? 0 : 1;
 
-		if (!acc_device_gpio_write(CE_PIN, cea_val) {
+		if (!acc_device_gpio_write(CE_PIN, cea_val)) {
 			return false;
 		}
 	}
