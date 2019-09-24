@@ -47,14 +47,14 @@
 /**
  * @brief The reference frequency used by this board
  *
- * This assumes 24 MHz on XR111-3 R1C
+ * 26MHz crystal is attached to SparkFun Pulsed Radar
  */
 #define ACC_BOARD_REF_FREQ	26000000
 
 /**
  * @brief The SPI speed of this board
+ * Max speed of a Rapsberry Pi 3 is 1MHz
  */
-//#define ACC_BOARD_SPI_SPEED	15000000
 #define ACC_BOARD_SPI_SPEED	1000000
 
 /**
