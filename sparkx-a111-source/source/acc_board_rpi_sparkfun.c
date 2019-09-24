@@ -154,10 +154,11 @@ bool acc_board_gpio_init(void)
 	acc_device_gpio_set_initial_pull(ENABLE_PIN, 0);
 	// acc_device_gpio_set_initial_pull(CE_A_PIN, 0);
 
-	if(
+	if (
 		!acc_device_gpio_input(GPIO0_PIN)   ||
 		!acc_device_gpio_write(RSTn_PIN, 0) ||
-		!acc_device_gpio_write(ENABLE_PIN, 0))
+		!acc_device_gpio_write(ENABLE_PIN, 0)
+     )
 	{
 	  return false;
 	}
@@ -282,21 +283,6 @@ void acc_board_start_sensor(acc_sensor_id_t sensor){
 	sensor_state[sensor - 1] = SENSOR_STATE_BUSY;
 }
 
-
-bool acc_board_stop_sensor(acc_sensor_id_t sensor)
-{
-	if (sensor_state[sensor - 1] != SENSOR_STATE_BUSY) {
-		return false;
-	}
-
-	sensor_state[sensor - 1] = SENSOR_STATE_UNKNOWN;
-
-	if (acc_board_all_sensors_inactive()) {
-		return acc_board_reset_sensor();
-	}
-
-	return true;
-}
 
 void acc_board_stop_sensor(acc_sensor_id_t sensor)
 {
