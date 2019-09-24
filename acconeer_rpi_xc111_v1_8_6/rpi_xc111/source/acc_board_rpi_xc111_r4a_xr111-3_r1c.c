@@ -365,7 +365,7 @@ void acc_board_start_sensor(acc_sensor_id_t sensor)
 	}
 
 	// Clear pending interrupts
-    while (acc_os_semaphore_wait(isr_semaphores[sensor - 1], 0));
+	while (acc_os_semaphore_wait(isr_semaphores[sensor - 1], 0));
 
 	sensor_state[sensor - 1] = SENSOR_STATE_BUSY;
 }
