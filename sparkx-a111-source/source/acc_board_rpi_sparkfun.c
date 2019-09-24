@@ -14,7 +14,6 @@
 #include "acc_driver_gpio_linux_sysfs.h"
 #include "acc_driver_os_linux.h"
 #include "acc_driver_spi_linux_spidev.h"
-#include "acc_log.h"
 
 /**
  * @brief The module name
@@ -85,7 +84,7 @@ typedef enum {
 static acc_board_sensor_state_t sensor_state[SENSOR_COUNT] = {SENSOR_STATE_UNKNOWN};
 
 static acc_device_handle_t spi_handle;
-static acc_os_semaphor_t isr_semaphores[SENSOR_COUNT];
+static acc_os_semaphore_t  isr_semaphores[SENSOR_COUNT];
 
 static void isr_sensor1(void)
 
@@ -156,12 +155,10 @@ bool acc_board_gpio_init(void)
 	// acc_device_gpio_set_initial_pull(CE_A_PIN, 0);
 
 	if(
-		!acc_device_gpio_input(GPIO0_PIN))  ||
+		!acc_device_gpio_input(GPIO0_PIN)   ||
 		!acc_device_gpio_write(RSTn_PIN, 0) ||
-		//!acc_device_gpio_write(CE_A_PIN, 0) ||
 		!acc_device_gpio_write(ENABLE_PIN, 0))
 	{
-		ACC_LOG_WARNING("%s: failed to set initial pull with status: %s", __func__, false);
 	  return false;
 	}
 
@@ -286,10 +283,9 @@ void acc_board_start_sensor(acc_sensor_id_t sensor){
 }
 
 
-bool acc_board_stop_sensor(acc_sensor_t sensor)
+bool acc_board_stop_sensor(acc_sensor_id_t sensor)
 {
 	if (sensor_state[sensor - 1] != SENSOR_STATE_BUSY) {
-		ACC_LOG_ERROR("Sensor %u already inactive.", sensor);
 		return false;
 	}
 
@@ -325,9 +321,7 @@ bool acc_board_chip_select(acc_sensor_id_t sensor, uint_fast8_t cs_assert)
 		uint_fast8_t cea_val = (sensor == 1 || sensor == 2) ? 0 : 1;
 		uint_fast8_t ceb_val = (sensor == 1 || sensor == 3) ? 0 : 1;
 
-		if (
-		  !acc_device_gpio_write(CE_A_PIN, cea_val) ||
-			!acc_device_gpio_write(CE_B_PIN, ceb_val))
+		if ( )// remove CEA and CEB entirely) 
 		{
 			return false;
 		}
