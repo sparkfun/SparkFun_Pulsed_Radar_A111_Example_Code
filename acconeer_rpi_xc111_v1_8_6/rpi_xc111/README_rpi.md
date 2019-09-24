@@ -3,7 +3,7 @@
 ## 1 Setup Raspberry Pi 2 or 3
 
 - Download the latest version of Raspbian (as of writing Stretch) from <https://www.raspberrypi.org/downloads/raspbian/>.
-- Write the Raspbian img-file to an SD card. Do __not__ copy the file to the SD-card, it wont work. Check <https://www.raspberrypi.org/documentation/installation/installing-images/> if you are unsure.
+d  Raspbian img-file to an SD card. Do __not__ copy the file to the SD-card, it wont work. Check <https://www.raspberrypi.org/documentation/installation/installing-images/> if you are unsure.
     - First, make sure that you have extracted the img file from the downloaded zip.
 	- If you are using Windows/OS X or are a Linux GUI fan, download an image burner software, like Etcher,
 	  and use that program to write the image to the SD-card.

@@ -157,13 +157,13 @@ bool acc_board_gpio_init(void)
 	acc_device_gpio_set_initial_pull(GPIO0_PIN, 0);
 	acc_device_gpio_set_initial_pull(RSTn_PIN, 1);
 	acc_device_gpio_set_initial_pull(ENABLE_PIN, 0);
-	acc_device_gpio_set_initial_pull(CE_PIN, 0);
+	acc_device_gpio_set_initial_pull(CE_PIN, 0); // set low
 
 	if (
 		!acc_device_gpio_input(GPIO0_PIN)     ||
 		!acc_device_gpio_write(RSTn_PIN, 0)   ||
 		!acc_device_gpio_write(ENABLE_PIN, 0) ||
-	  !acc_device_gpio_set_initial_pull(CE_PIN, 0)
+	  !acc_device_gpio_write(CE_PIN, 0)
      )
 	{
 	  return false;
@@ -266,6 +266,9 @@ void acc_board_start_sensor(acc_sensor_id_t sensor){
 			return;
 		}
 
+    // Wait for power on reset.
+    acc_os_sleep_us(5000);
+
 		if (!acc_device_gpio_write(RSTn_PIN, 1))
 		{
 			fprintf(stderr, "%s: Unable to deactivate RSTn.\n", __func__);
@@ -286,7 +289,7 @@ void acc_board_start_sensor(acc_sensor_id_t sensor){
 	}
 
 	// Clear pending interrupts
-	while (acc_os_semaphore_wait(isr_semaphores[sensor - 1], 0));
+  while (acc_os_semaphore_wait(isr_semaphores[sensor - 1], 0));
 
 	sensor_state[sensor - 1] = SENSOR_STATE_BUSY;
 }
