@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 #include "acc_board.h"
-#include "acc_definitions.h" // - added for acc_os_mutex_t
+#include "acc_definitions.h"
 #include "acc_device_gpio.h"
 #include "acc_device_os.h"
 #include "acc_device_spi.h"
@@ -153,10 +153,12 @@ bool acc_board_gpio_init(void)
 	acc_device_gpio_set_initial_pull(GPIO0_PIN, 0);
 	acc_device_gpio_set_initial_pull(RSTn_PIN, 1);
 	acc_device_gpio_set_initial_pull(ENABLE_PIN, 0);
+	// acc_device_gpio_set_initial_pull(CE_A_PIN, 0);
 
 	if(
 		!acc_device_gpio_input(GPIO0_PIN))  ||
 		!acc_device_gpio_write(RSTn_PIN, 0) ||
+		//!acc_device_gpio_write(CE_A_PIN, 0) ||
 		!acc_device_gpio_write(ENABLE_PIN, 0))
 	{
 		ACC_LOG_WARNING("%s: failed to set initial pull with status: %s", __func__, false);
@@ -193,12 +195,17 @@ bool acc_board_init(void)
 
   spi_handle = acc_device_spi_create(&configuration);
 
+	if (!setup_isr())
+	{
+		deinit();
+		return false;
+	}
+
 	for (uint_fast8_t sensor_index = 0; sensor_index < SENSOR_COUNT; sensor_index++) {
 		sensor_state[sensor_index] = SENSOR_STATE_UNKNOWN;
 	}
 
-	init_done = trueacc_device_gpio_input;
-	acc_os_mutex_unlock(init_mutex);
+	init_done = true;
 
 	return true;
 }
@@ -211,71 +218,71 @@ bool acc_board_init(void)
  *
  * @return Status
  */
+
 static bool acc_board_reset_sensor(void)
 {
-
-	status = acc_device_gpio_write(RSTn_PIN, 0);
-	if (status != true) {
-		ACC_LOG_ERROR("Unable to activate RSTn");
-		return status;
+	if (!acc_device_gpio_write(RSTn_PIN, 0))
+	{
+		fprintf(stderr, "%s: Unable to activate RSTn.\n", __func__);
+		return false;
 	}
 
-	status = acc_device_gpio_write(ENABLE_PIN, 0);
-	if (status != true) {
-		ACC_LOG_ERROR("Unable to deactivate ENABLE");
-		return status;
+	if (!acc_device_gpio_write(ENABLE_PIN, 0))
+	{
+		fprintf(stderr, "%s: Unable to deactivate ENABLE.\n", __func__);
+		return false;
 	}
 
 	return true;
 }
 
 
-bool acc_board_start_sensor(acc_sensor_t sensor)
-{
+void acc_board_start_sensor(acc_sensor_id_t sensor){
 
-	if (sensor_state[sensor - 1] == SENSOR_STATE_BUSY) {
-		ACC_LOG_ERROR("Sensor %u already active.", sensor);
-		return false;
+	if (sensor_state[sensor - 1] == SENSOR_STATE_BUSY)
+	{
+		return;
 	}
 
-	if (acc_board_all_sensors_inactive()) {
-		status = acc_device_gpio_write(RSTn_PIN, 0);
-		if (status != true) {
-			ACC_LOG_ERROR("Unable to activate RSTn");
+	if (acc_board_all_sensors_inactive())
+	{
+		if (!acc_device_gpio_write(RSTn_PIN, 0))
+		{
+			fprintf(stderr, "%s: Unable to activate RSTn.\n", __func__);
 			acc_board_reset_sensor();
-			return status;
+			return;
 		}
 
-		status = acc_device_gpio_write(ENABLE_PIN, 1);
-		if (status != true) {
-			ACC_LOG_ERROR("Unable to activate ENABLE");
+		if (!acc_device_gpio_write(ENABLE_PIN, 1))
+		{
+			fprintf(stderr, "%s: Unable to activate ENABLE.\n", __func__);
 			acc_board_reset_sensor();
-			return status;
+			return;
 		}
 
-		// Wait for Power On Reset
-		acc_os_sleep_us(5000);
-
-		status = acc_device_gpio_write(RSTn_PIN, 1);
-		if (status != true) {
-			ACC_LOG_ERROR("Unable to deactivate RSTn");
+		if (!acc_device_gpio_write(RSTn_PIN, 1))
+		{
+			fprintf(stderr, "%s: Unable to deactivate RSTn.\n", __func__);
 			acc_board_reset_sensor();
-			return status;
+			return;
 		}
 
-		for (uint_fast8_t sensor_index = 0; sensor_index < SENSOR_COUNT; sensor_index++) {
+		for (uint_fast8_t sensor_index = 0; sensor_index < SENSOR_COUNT; sensor_index++)
+		{
 			sensor_state[sensor_index] = SENSOR_STATE_READY;
 		}
 	}
 
-	if (sensor_state[sensor - 1] != SENSOR_STATE_READY) {
-		ACC_LOG_ERROR("Sensor has not been reset");
-		return false;
+	if (sensor_state[sensor - 1] != SENSOR_STATE_READY)
+	{
+		fprintf(stderr, "%s: Sensor %" PRIsensor_id " has not been reset.\n", __func__, sensor);
+		return;
 	}
 
-	sensor_state[sensor - 1] = SENSOR_STATE_BUSY;
+	// Clear pending interrupts
+	while (acc_os_semaphore_wait(isr_semaphores[sensor - 1], 0));
 
-	return true;
+	sensor_state[sensor - 1] = SENSOR_STATE_BUSY;
 }
 
 
@@ -295,91 +302,82 @@ bool acc_board_stop_sensor(acc_sensor_t sensor)
 	return true;
 }
 
-
-void acc_board_get_spi_bus_cs(acc_sensor_t sensor, uint_fast8_t *bus, uint_fast8_t *cs)
+void acc_board_stop_sensor(acc_sensor_id_t sensor)
 {
-	if ((sensor <= 0) || (sensor > SENSOR_COUNT)) {
-		*bus = -1;
-		*cs  = -1;
-	} else {
-		*bus = ACC_BOARD_BUS;
-		*cs  = ACC_BOARD_CS;
+	if (sensor_state[sensor - 1] != SENSOR_STATE_BUSY)
+	{
+		return;
+	}
+
+	sensor_state[sensor - 1] = SENSOR_STATE_UNKNOWN;
+
+	if (acc_board_all_sensors_inactive())
+	{
+		acc_board_reset_sensor();
 	}
 }
 
-
-bool acc_board_chip_select(acc_sensor_t sensor, uint_fast8_t cs_assert)
+bool acc_board_chip_select(acc_sensor_id_t sensor, uint_fast8_t cs_assert)
 {
-	ACC_UNUSED(sensor);
-	ACC_UNUSED(cs_assert);
 
 	if (cs_assert) {
+
 		uint_fast8_t cea_val = (sensor == 1 || sensor == 2) ? 0 : 1;
 		uint_fast8_t ceb_val = (sensor == 1 || sensor == 3) ? 0 : 1;
 
 		if (
-			(status = acc_device_gpio_write(CE_A_PIN, cea_val)) ||
-			(status = acc_device_gpio_write(CE_B_PIN, ceb_val))
-		) {
-			ACC_LOG_ERROR("%s failed with %s", __func__, acc_log_status_name(status));
-			return status;
+		  !acc_device_gpio_write(CE_A_PIN, cea_val) ||
+			!acc_device_gpio_write(CE_B_PIN, ceb_val))
+		{
+			return false;
 		}
-		status = acc_device_gpio_write(CE_PIN, 0);
-		if (status) {
-			ACC_LOG_ERROR("%s failed with %s", __func__, acc_log_status_name(status));
-			return status;
-		}
-	}*/
+  }
 
 	return true;
 }
 
 
-acc_sensor_t acc_board_get_sensor_count(void)
+uint32_t acc_board_get_sensor_count(void)
 {
 	return SENSOR_COUNT;
 }
 
-
-bool acc_board_is_sensor_interrupt_connected(acc_sensor_t sensor)
+bool acc_board_wait_for_sensor_interrupt(acc_sensor_id_t sensor_id, uint32_t timeout_ms)
 {
-	ACC_UNUSED(sensor);
-
-	return false;
+	return acc_os_semaphore_wait(isr_semaphores[sensor_id - 1], timeout_ms);
 }
-
-
-bool acc_board_is_sensor_interrupt_active(acc_sensor_t sensor)
-{
-	uint_fast8_t value;
-
-	status = acc_device_gpio_read(sensor_interrupt_pins[sensor - 1], &value);
-	if (status != true) {
-		ACC_LOG_ERROR("Could not obtain GPIO interrupt value for sensor %" PRIsensor " with status: %s.", sensor, acc_log_status_name(status));
-		return false;
-	}
-
-	return value != 0;
-}
-
 
 float acc_board_get_ref_freq(void)
 {
 	return ACC_BOARD_REF_FREQ;
 }
 
-
-uint32_t acc_board_get_spi_speed(uint_fast8_t bus)
-{
-	ACC_UNUSED(bus);
-
-	return ACC_BOARD_SPI_SPEED;
-}
-
-
 bool acc_board_set_ref_freq(float ref_freq)
 {
-	ACC_UNUSED(ref_freq);
+	(void)ref_freq;
 
-	return ACC_STATUS_UNSUPPORTED;
+	return false;
+}
+
+void acc_board_sensor_transfer(acc_sensor_id_t sensor_id, uint8_t *buffer, size_t buffer_length)
+{
+	uint_fast8_t bus = acc_device_spi_get_bus(spi_handle);
+
+	acc_device_spi_lock(bus);
+
+	if (!acc_board_chip_select(sensor_id, 1))
+	{
+		acc_device_spi_unlock(bus);
+		return;
+	}
+
+	if (!acc_device_spi_transfer(spi_handle, buffer, buffer_length))
+	{
+		acc_device_spi_unlock(bus);
+		return;
+	}
+
+	acc_board_chip_select(sensor_id, 0);
+
+	acc_device_spi_unlock(bus);
 }
