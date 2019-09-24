@@ -70,7 +70,7 @@
 /**
  * @brief Number of GPIO pins
  */
-#define GPIO_PIN_COUNT 13
+#define GPIO_PIN_COUNT 1 
 
 /**
  * @brief Sensor states
@@ -157,12 +157,13 @@ bool acc_board_gpio_init(void)
 	acc_device_gpio_set_initial_pull(GPIO0_PIN, 0);
 	acc_device_gpio_set_initial_pull(RSTn_PIN, 1);
 	acc_device_gpio_set_initial_pull(ENABLE_PIN, 0);
-	// acc_device_gpio_set_initial_pull(CE_A_PIN, 0);
+	acc_device_gpio_set_initial_pull(CE_PIN, 0);
 
 	if (
-		!acc_device_gpio_input(GPIO0_PIN)   ||
-		!acc_device_gpio_write(RSTn_PIN, 0) ||
-		!acc_device_gpio_write(ENABLE_PIN, 0)
+		!acc_device_gpio_input(GPIO0_PIN)     ||
+		!acc_device_gpio_write(RSTn_PIN, 0)   ||
+		!acc_device_gpio_write(ENABLE_PIN, 0) ||
+	  !acc_device_gpio_set_initial_pull(CE_PIN, 0)
      )
 	{
 	  return false;
@@ -181,7 +182,7 @@ bool acc_board_init(void)
 	if (init_done) {
 		return true;
 	}
-
+ 1
 	acc_driver_os_linux_register();
 	acc_os_init();
 
