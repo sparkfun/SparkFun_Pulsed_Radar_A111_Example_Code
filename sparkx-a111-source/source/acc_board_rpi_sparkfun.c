@@ -41,7 +41,7 @@
 #define RSTn_PIN	6        // Not connected
 #define ENABLE_PIN	27
 
-//#define CE_PIN      8        // Breakout CS pin
+#define CE_PIN      8        // Breakout CS pin
 /**@}*/
 
 /**
@@ -297,6 +297,22 @@ void acc_board_stop_sensor(acc_sensor_id_t sensor)
 	{
 		acc_board_reset_sensor();
 	}
+}
+
+bool acc_board_chip_select(acc_sensor_id_t sensor, uint_fast8_t cs_assert)
+{
+	if (cs_assert)
+	{
+		uint_fast8_t cea_val = (sensor == 1 || sensor == 2) ? 0 : 1;
+
+		if (
+			!acc_device_gpio_write(CE_A_PIN, cea_val) ||
+		{
+			return false;
+		}
+	}
+
+	return true;
 }
 
 uint32_t acc_board_get_sensor_count(void)
