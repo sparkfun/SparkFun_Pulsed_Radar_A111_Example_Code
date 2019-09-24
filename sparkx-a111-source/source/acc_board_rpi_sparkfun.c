@@ -67,6 +67,10 @@
  */
 #define ACC_BOARD_CS		0
 
+/**
+ * @brief Number of GPIO pins
+ */
+#define GPIO_PIN_COUNT 13
 
 /**
  * @brief Sensor states
@@ -84,6 +88,7 @@ typedef enum {
 static acc_board_sensor_state_t sensor_state[SENSOR_COUNT] = {SENSOR_STATE_UNKNOWN};
 
 static acc_device_handle_t spi_handle;
+static gpio_t              gpios[GPIO_PIN_COUNT];
 static acc_os_semaphore_t  isr_semaphores[SENSOR_COUNT];
 
 static void isr_sensor1(void)
@@ -180,7 +185,9 @@ bool acc_board_init(void)
 	acc_driver_os_linux_register();
 	acc_os_init();
 
+	acc_driver_gpio_linux_sysfs_register(GPIO_PIN_COUNT, gpios);
 	acc_driver_spi_linux_spidev_register();
+
   acc_device_gpio_init();
 
   acc_device_spi_configuration_t configuration;
@@ -305,9 +312,7 @@ bool acc_board_chip_select(acc_sensor_id_t sensor, uint_fast8_t cs_assert)
 	{
 		uint_fast8_t cea_val = (sensor == 1 || sensor == 2) ? 0 : 1;
 
-		if (
-			!acc_device_gpio_write(CE_A_PIN, cea_val) ||
-		{
+		if (!acc_device_gpio_write(CE_PIN, cea_val) {
 			return false;
 		}
 	}
