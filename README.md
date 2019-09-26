@@ -5,16 +5,21 @@ SparkFun A111 Pulsed Radar Example Code
 
 [*SparkFun A111 Pulsed Radar (SEN-15577)*](https://www.sparkfun.com/products/15577)
 
-Repository Contents
+Repository maintained by [Acconeer](https://www.acconeer.com/products)!
 -------------------
 
+This Software Repo is actively maintained by Acconeer to give you the latest
+from their **Software Development Kit**. As such all example code will work
+with their latest releases. 
 
 Documentation
 -------------------
 * Acconeer
   * **[Developer](https://developer.acconeer.com/)** - SW Download, datasheet, user guide, FAQ
-* **[Acconeer Example Code](https://github.com/acconeer)**
-* **[GitHub Hardware Repo](https://github.com/sparkfun/SparkFun_Pulsed_Radar_Breakout_A111)** - Hardware repo for the board.
+* **[Acconeer Python Exploration Tool](https://github.com/acconeer)** - This
+  tool offers a cool way to visually see what the SparkFun Pulsed Radar is
+  doing in real time! 
+* **[GitHub Hardware Repo](https://github.com/acconeer/acconeer-python-exploration)** - Hardware repo for the board.
 * **[Getting Started Guide](https://learn.sparkfun.com/tutorials/getting-started-with-the-a111-pulsed-radar-sensor)** - Basic hookup guide.
 
 License Information
