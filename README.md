@@ -22,6 +22,11 @@ Documentation
 * **[GitHub Hardware Repo](https://github.com/acconeer/acconeer-python-exploration)** - Hardware repo for the board.
 * **[Getting Started Guide](https://learn.sparkfun.com/tutorials/getting-started-with-the-a111-pulsed-radar-sensor)** - Basic hookup guide.
 
+Releases Included in this Repository
+---
+* **1.10.0**[`acconeer_rpi_sparkfun_v1_10_0`](https://github.com/sparkfun/SparkFun_Pulsed_Radar_A111_Example_Code/tree/master/Acconeer%20SDK/acconeer_rpi_sparkfun_v1_10_0)
+* **1.8.6** [`acconeer_rpi_xc111_v1_8_6`](https://github.com/sparkfun/SparkFun_Pulsed_Radar_A111_Example_Code/tree/master/Acconeer%20SDK/acconeer_rpi_xc111_v1_8_6)
+
 License Information
 -------------------
 
